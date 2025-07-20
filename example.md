@@ -1,4 +1,4 @@
 # Hello, Markdown
 
 ### Bold Example
-**bold text**
+**bold text**：words after bold text.

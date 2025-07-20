@@ -2,22 +2,53 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
 
 char result[1024] = {0};
 unsigned int result_len = 0;
 
-void string_append(const char *str, unsigned int len)
+void string_back_n_step(unsigned int n)
 {
-    if (result_len + len < sizeof(result))
+    if (result_len >= n)
     {
-        memcpy(result + result_len, str, len);
-        result_len += len;
-        result[result_len] = '\n'; // 换行符结尾
+        result_len -= (n + 1);
+        result[result_len] = '\n';
         result_len++;
     }
     else
     {
+        fprintf(stderr, "Cannot backstep beyond the start of the string\n");
+    }
+}
+
+void string_append(const char *str, MD_SIZE size, bool add_newline)
+{
+    if (result_len + size < sizeof(result))
+    {
+        memcpy(result + result_len, str, size);
+        result_len += size;
+        if (add_newline)
+        {
+            result[result_len] = '\n'; // 换行符结尾
+            result_len++;
+        }
+    }
+    else
+    {
         fprintf(stderr, "Result buffer overflow\n");
+    }
+}
+
+void string_append_head(const char *str, MD_SIZE size)
+{
+    for (unsigned int i = 0; i < size; i++)
+    {
+        result[result_len++] = str[i];
+        if (str[i] == '\n')
+        {
+            break;
+        }
     }
 }
 
@@ -30,7 +61,7 @@ int enter_block_callback(MD_BLOCKTYPE type, void *detail, void *userdata)
     switch (type)
     {
     case MD_BLOCK_H:
-        string_append(head[((MD_BLOCK_H_DETAIL *)detail)->level - 1], strlen(head[((MD_BLOCK_H_DETAIL *)detail)->level - 1]));
+        string_append(head[((MD_BLOCK_H_DETAIL *)detail)->level - 1], strlen(head[((MD_BLOCK_H_DETAIL *)detail)->level - 1]), false);
         break;
     }
 
@@ -46,7 +77,7 @@ int leave_block_callback(MD_BLOCKTYPE type, void *detail, void *userdata)
     switch (type)
     {
     case MD_BLOCK_H:
-        string_append(head[((MD_BLOCK_H_DETAIL *)detail)->level - 1], strlen(head[((MD_BLOCK_H_DETAIL *)detail)->level - 1]));
+        string_append(head[((MD_BLOCK_H_DETAIL *)detail)->level - 1], strlen(head[((MD_BLOCK_H_DETAIL *)detail)->level - 1]), false);
         break;
     }
     return 0;
@@ -59,7 +90,7 @@ int enter_span_callback(MD_SPANTYPE type, void *detail, void *userdata)
     switch (type)
     {
     case MD_SPAN_STRONG:
-        string_append("<strong>", strlen("<strong>"));
+        string_append("<strong>", strlen("<strong>"), false);
         break;
     }
 
@@ -73,7 +104,7 @@ int leave_span_callback(MD_SPANTYPE type, void *detail, void *userdata)
     switch (type)
     {
     case MD_SPAN_STRONG:
-        string_append("</strong>", strlen("</strong>"));
+        string_append("</strong>", strlen("</strong>"), false);
         break;
     }
 
@@ -84,7 +115,18 @@ int text_callback(MD_TEXTTYPE type, const MD_CHAR *text, MD_SIZE size, void *use
 {
     printf("Text of type: %d.\n", type);
     printf("%s\n", text);
-    string_append(text, strlen(text));
+    printf("Text size: %zu\n", strlen(text));
+    printf("Text size: %u\n", size);
+
+    switch (type)
+    {
+    case MD_TEXT_NORMAL:
+        string_append(text, size, false);
+        break;
+
+    default:
+        break;
+    }
     return 0;
 }
 
